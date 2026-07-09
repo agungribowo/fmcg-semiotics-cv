@@ -1,0 +1,29 @@
+# Data (managed by DVC)
+data/01_raw/
+data/02_interim/
+data/03_processed/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Playwright browser cache
+ms-playwright/
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# DVC
+.dvc/tmp/
