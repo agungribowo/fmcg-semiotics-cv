@@ -1,22 +1,26 @@
 """
 KlikIndomaret Scraper
 =====================
-Playwright-based scraper untuk mengunduh gambar produk dari KlikIndomaret.
-Output:
-  - Gambar .jpg/.png disimpan ke data/01_raw/{keyword}/
-  - Metadata CSV + JSON disimpan ke data/01_raw/
+Scraper produk dari KlikIndomaret via Xpress category pages.
+Karena search API diblokir WAF, strategi:
+  1. Scrape produk dari halaman kategori Xpress (makanan, minuman, dll)
+  2. Filter produk yang namanya mengandung keyword target
+  3. Download gambar ke data/01_raw/
 """
 
 import json
 import logging
-import os
+import re
 import time
+import urllib3
 from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
 import requests
 from playwright.sync_api import sync_playwright
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
@@ -30,7 +34,32 @@ KEYWORDS = [
     "onigiri", "okonomiyaki", "tempura",
 ]
 
-BASE_URL = "https://www.klikindomaret.com/search/?searchkey="
+# Keyword Indonesia -> Jepang mapping (produk di Indo pakai istilah lokal)
+KEYWORD_MAP = {
+    "ramen": ["mie", "mi", "noodle", "ramen"],
+    "matcha": ["matcha", "green tea", "teh hijau"],
+    "takoyaki": ["takoyaki"],
+    "udon": ["udon", "mie"],
+    "nori": ["nori", "rumput laut"],
+    "teriyaki": ["teriyaki"],
+    "miso": ["miso"],
+    "sushi": ["sushi", "sushi rice"],
+    "wasabi": ["wasabi"],
+    "sake": ["sake"],
+    "soba": ["soba"],
+    "edamame": ["edamame", "kedelai"],
+    "onigiri": ["onigiri"],
+    "okonomiyaki": ["okonomiyaki"],
+    "tempura": ["tempura"],
+}
+
+XPRESS_CATEGORIES = [
+    "makanan",
+    "minuman",
+    "makanan-ringan",
+    "sembako",
+    "dapur-bahan-masakan",
+]
 
 HEADERS = {
     "User-Agent": (
@@ -40,131 +69,163 @@ HEADERS = {
     )
 }
 
+ANTI_DETECT_SCRIPT = """
+Object.defineProperty(navigator, 'webdriver', { get: () => false });
+Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+Object.defineProperty(navigator, 'languages', { get: () => ['id-ID', 'id', 'en'] });
+"""
+
 
 class KlikIndomaretScraper:
     def __init__(self, headless: bool = True, download_images: bool = True):
         self.headless = headless
         self.download_images = download_images
         self.scraped_data: List[dict] = []
+        self._category_cache: List[dict] = []
 
-    def _download_image(self, url: str, save_path: Path) -> Optional[str]:
+    def _download(self, url: str, save_path: Path) -> Optional[str]:
         try:
-            resp = requests.get(url, headers=HEADERS, timeout=15)
+            real_url = url
+            if "_next/image" in url or "assets-klikidmcore" in url:
+                from urllib.parse import parse_qs, unquote, urlparse
+                qs = parse_qs(urlparse(url).query)
+                raw = qs.get("url", [None])[0]
+                if raw:
+                    real_url = unquote(raw)
+
+            resp = requests.get(real_url, headers=HEADERS, timeout=30, verify=False)
             resp.raise_for_status()
-            ext = Path(url).suffix
-            if ext.lower() not in (".jpg", ".jpeg", ".png", ".webp"):
-                ext = ".jpg"
-            filename = f"{save_path.stem}{ext}"
-            full_path = save_path.parent / filename
+            ct = resp.headers.get("content-type", "")
+            ext = ".png" if "png" in ct else ".webp" if "webp" in ct else ".jpg"
+            full_path = save_path.parent / f"{save_path.stem}{ext}"
             with open(full_path, "wb") as f:
                 f.write(resp.content)
             return str(full_path)
         except Exception as e:
-            logger.warning(f"Gagal download gambar {url}: {e}")
+            logger.warning(f"Gagal download: {e}")
             return None
 
-    def scrape_keyword(self, keyword: str) -> List[dict]:
-        logger.info(f"Memulai scraping untuk kata kunci: {keyword}")
-        target_url = f"{BASE_URL}{keyword}"
+    def _dismiss_modal(self, page):
+        page.keyboard.press("Escape")
+        page.wait_for_timeout(1000)
+
+    def scrape_category(self, category: str) -> List[dict]:
+        logger.info(f"[KlikIndomaret] Scrape kategori: {category}")
+        url = f"https://www.klikindomaret.com/xpress/category/{category}"
         results = []
 
         with sync_playwright() as p:
-            browser = p.chromium.launch(headless=self.headless)
-            page = browser.new_page()
-            page.goto(target_url)
-            time.sleep(3)
+            browser = p.chromium.launch(
+                headless=self.headless,
+                args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+            )
+            ctx = browser.new_context(
+                user_agent=HEADERS["User-Agent"],
+                viewport={"width": 1280, "height": 720},
+                locale="id-ID",
+                timezone_id="Asia/Jakarta",
+            )
+            page = ctx.new_page()
+            page.add_init_script(ANTI_DETECT_SCRIPT)
+
+            page.goto(url, timeout=30000)
+            page.wait_for_timeout(3000)
+            self._dismiss_modal(page)
 
             page.evaluate("window.scrollTo(0, document.body.scrollHeight)")
-            time.sleep(2)
+            page.wait_for_timeout(3000)
+            self._dismiss_modal(page)
 
-            product_elements = page.locator("div.item")
-            count = product_elements.count()
-            logger.info(f"Ditemukan {count} produk untuk '{keyword}'")
+            cards = page.locator(".card-product")
+            total = cards.count()
+            real = sum(
+                1 for i in range(total)
+                if "shimmers-animate" not in cards.nth(i).inner_html()
+            )
+            logger.info(f"  {category}: {real}/{total} produk real")
 
-            for i in range(count):
-                item = product_elements.nth(i)
+            for i in range(total):
                 try:
-                    name_el = item.locator("div.title").first
-                    product_name = name_el.inner_text().strip() if name_el.count() > 0 else "N/A"
-
-                    price_el = item.locator("span.price-value").first
-                    product_price = price_el.inner_text().strip() if price_el.count() > 0 else "N/A"
-
-                    image_el = item.locator("img").first
-                    image_url = image_el.get_attribute("src")
-                    if not image_url or "placeholder" in image_url:
-                        image_url = image_el.get_attribute("data-src")
-
-                    if not image_url:
+                    c = cards.nth(i)
+                    if "shimmers-animate" in c.inner_html():
                         continue
 
-                    record = {
-                        "keyword": keyword,
+                    text = c.inner_text().strip()
+                    product_name = re.sub(r"^Tambah\s*", "", text)
+                    img_el = c.locator("img").first
+                    image_url = img_el.get_attribute("src") or ""
+
+                    results.append({
+                        "source": "klikindomaret",
+                        "category": category,
                         "product_name": product_name,
-                        "price": product_price,
                         "image_url": image_url,
                         "local_path": None,
-                    }
-
-                    if self.download_images:
-                        kw_dir = RAW_DATA_DIR / keyword
-                        kw_dir.mkdir(parents=True, exist_ok=True)
-                        safe_name = "".join(c for c in product_name if c.isalnum() or c in " _-").strip()
-                        save_path = kw_dir / f"{keyword}_{i:04d}_{safe_name[:60]}"
-                        local = self._download_image(image_url, save_path)
-                        if local:
-                            record["local_path"] = local
-                            logger.info(f"  [{i+1}/{count}] {product_name} -> {local}")
-                        else:
-                            logger.warning(f"  [{i+1}/{count}] {product_name}: gambar gagal diunduh")
-                    else:
-                        logger.info(f"  [{i+1}/{count}] {product_name}")
-
-                    results.append(record)
-
+                    })
                 except Exception as e:
-                    logger.error(f"Gagal mengekstrak item ke-{i}: {e}")
+                    logger.error(f"  Gagal ekstrak card {i}: {e}")
 
             browser.close()
 
         return results
 
+    def scrape_all_categories(self) -> List[dict]:
+        """Scrape SEMUA kategori SEKALI, return gabungan semua produk."""
+        all_products = []
+        for cat in XPRESS_CATEGORIES:
+            products = self.scrape_category(cat)
+            all_products.extend(products)
+        self._category_cache = all_products
+        logger.info(f"[KlikIndomaret] Total {len(all_products)} produk dari {len(XPRESS_CATEGORIES)} kategori")
+        return all_products
+
+    def filter_by_keyword(self, keyword: str, all_products: List[dict]) -> List[dict]:
+        """Filter produk dari cache berdasarkan keyword."""
+        variants = KEYWORD_MAP.get(keyword, [keyword])
+        matched = []
+        for p in all_products:
+            name_lower = p["product_name"].lower()
+            if any(v in name_lower for v in variants):
+                if self.download_images:
+                    kw_dir = RAW_DATA_DIR / f"klikindomaret_{keyword}"
+                    kw_dir.mkdir(parents=True, exist_ok=True)
+                    safe = "".join(c for c in p["product_name"] if c.isalnum() or c in " _-").strip()[:60]
+                    save_path = kw_dir / f"{keyword}_{len(matched):04d}_{safe}"
+                    local = self._download(p["image_url"], save_path)
+                    if local:
+                        p["local_path"] = local
+                p["keyword"] = keyword
+                matched.append(p)
+
+        logger.info(f"[KlikIndomaret] '{keyword}': {len(matched)} cocok dari {len(all_products)}")
+        return matched
+
     def scrape_all(self, keywords: Optional[List[str]] = None) -> List[dict]:
         kw_list = keywords or KEYWORDS
+        all_products = self.scrape_all_categories()
         all_data = []
         for kw in kw_list:
-            results = self.scrape_keyword(kw)
+            results = self.filter_by_keyword(kw, all_products)
             all_data.extend(results)
         self.scraped_data = all_data
         return all_data
 
     def save_metadata(self):
         if not self.scraped_data:
-            logger.warning("Tidak ada data untuk disimpan.")
+            logger.warning("[KlikIndomaret] Tidak ada data.")
             return
-
         df = pd.DataFrame(self.scraped_data)
         df = df.drop_duplicates(subset=["product_name", "image_url"])
-
-        csv_path = RAW_DATA_DIR / "metadata.csv"
+        csv_path = RAW_DATA_DIR / "metadata_klikindomaret.csv"
         df.to_csv(csv_path, index=False)
-        logger.info(f"Metadata CSV disimpan: {csv_path} ({len(df)} baris)")
-
-        json_path = RAW_DATA_DIR / "metadata.json"
+        json_path = RAW_DATA_DIR / "metadata_klikindomaret.json"
         with open(json_path, "w") as f:
             json.dump(self.scraped_data, f, indent=2)
-        logger.info(f"Metadata JSON disimpan: {json_path}")
-
-        summary = df.groupby("keyword").agg(
+        logger.info(f"[KlikIndomaret] {len(df)} produk -> {csv_path}")
+        print(df.groupby("keyword").agg(
             total=("product_name", "count"),
-            with_images=("local_path", lambda x: x.notna().sum()),
-        )
-        print(f"\n{'='*50}")
-        print("RINGKASAN SCRAPING")
-        print(f"{'='*50}")
-        print(summary.to_string())
-        print(f"{'='*50}")
-        print(f"Total produk unik: {len(df)}")
+            images=("local_path", lambda x: x.notna().sum()),
+        ).to_string())
 
 
 if __name__ == "__main__":

@@ -25,5 +25,8 @@ ms-playwright/
 Thumbs.db
 .DS_Store
 
+# Environment (contains API keys!)
+.env
+
 # DVC
 .dvc/tmp/
