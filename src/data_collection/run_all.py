@@ -97,6 +97,16 @@ def run_google_images(keywords: List[str], suffix: str = ""):
     scraper.save_metadata()
 
 
+def run_fashion(sources: str = "all"):
+    logger.info("=" * 50)
+    logger.info("MEMULAI SCRAPER: Fashion (Kanji/Hiragana/Katakana)")
+    logger.info("=" * 50)
+    from src.data_collection.fashion_scraper import FashionScraper
+    scraper = FashionScraper(headless=True, download_images=True, max_products=15)
+    scraper.scrape_all(sources=sources)
+    scraper.save_metadata()
+
+
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else "all"
     kw_list = KEYWORDS + KEYWORDS_LANJUTAN
@@ -109,9 +119,16 @@ if __name__ == "__main__":
         run_google_images(KEYWORDS_LANJUTAN, "_id_lanjutan")
     elif mode == "tokopedia":
         run_tokopedia(kw_list, "_id")
+    elif mode == "fashion":
+        run_fashion("all")
+    elif mode == "fashion_tokopedia":
+        run_fashion("tokopedia")
+    elif mode == "fashion_google":
+        run_fashion("google")
     elif mode == "all":
         run_klikindomaret(kw_list)
         run_google_images(kw_list, "_id")
         run_tokopedia(kw_list, "_id")
+        run_fashion("all")
     else:
-        print("Usage: python run_all.py [klik|google|google_lanjutan|tokopedia|all]")
+        print("Usage: python run_all.py [klik|google|google_lanjutan|tokopedia|fashion|fashion_tokopedia|fashion_google|all]")
