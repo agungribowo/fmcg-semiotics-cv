@@ -22,7 +22,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-RAW_DATA_DIR = Path("data/02_interim/curated")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "02_interim" / "curated"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
 }

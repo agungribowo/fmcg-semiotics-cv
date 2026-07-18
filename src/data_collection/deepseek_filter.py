@@ -22,7 +22,8 @@ from openai import OpenAI
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-RAW_DIR = Path("data/01_raw")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DIR = PROJECT_ROOT / "data" / "01_raw"
 
 SYSTEM_PROMPT = """Anda adalah ahli semiotik yang menganalisis nama produk FMCG Indonesia.
 Tugas Anda: deteksi apakah nama produk mengandung ELEMEN SEMIOTIK JEPANG.

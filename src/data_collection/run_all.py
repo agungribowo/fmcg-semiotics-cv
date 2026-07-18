@@ -13,7 +13,8 @@ from typing import List
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-RAW_DATA_DIR = Path("data/01_raw")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "01_raw"
 
 KEYWORDS = [
     "ramen", "matcha", "takoyaki", "udon",

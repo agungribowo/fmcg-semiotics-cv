@@ -8,7 +8,8 @@ Gabungkan metadata_blibli_manual.csv ke metadata_all.csv.
 import pandas as pd
 from pathlib import Path
 
-RAW_DIR = Path("data/01_raw")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DIR = PROJECT_ROOT / "data" / "01_raw"
 ALL_CSV = RAW_DIR / "metadata_all.csv"
 BLIBLI_CSV = RAW_DIR / "metadata_blibli_manual.csv"
 

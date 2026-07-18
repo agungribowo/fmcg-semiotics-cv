@@ -19,8 +19,9 @@ import requests
 from pathlib import Path
 from datetime import datetime
 
-RAW_DIR = Path("data/01_raw/blibli_manual")
-METADATA_PATH = Path("data/01_raw/metadata_blibli_manual.csv")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "01_raw" / "blibli_manual"
+METADATA_PATH = PROJECT_ROOT / "data" / "01_raw" / "metadata_blibli_manual.csv"
 
 HEADERS = {
     "User-Agent": (
@@ -97,7 +98,7 @@ def save_metadata(records: list):
 
 
 def main():
-    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     # Load existing metadata untuk counter
     existing = load_existing_metadata()
@@ -106,7 +107,7 @@ def main():
     print("=" * 60)
     print("  BLIBLI SEMI-AUTOMATED IMAGE DOWNLOADER")
     print("=" * 60)
-    print(f"  Target folder: {RAW_DIR}")
+    print(f"  Target folder: {RAW_DATA_DIR}")
     print(f"  Existing images: {counter - 1}")
     print()
     print("  Paste link gambar Blibli (banyak sekaligus boleh).")
@@ -150,7 +151,7 @@ def main():
         for url in urls:
             product_name = extract_product_name(url)
             filename = f"blibli_{counter:04d}_{product_name}"
-            save_path = RAW_DIR / filename
+            save_path = RAW_DATA_DIR / filename
 
             result = download_image(url, save_path)
             if result["ok"]:
@@ -159,7 +160,7 @@ def main():
                     "keyword": "manual",
                     "product_name": product_name,
                     "image_url": url,
-                    "local_path": str(RAW_DIR / Path(result["path"]).name),
+                    "local_path": str(RAW_DATA_DIR / Path(result["path"]).name),
                     "file_size_kb": result["size_kb"],
                     "collection_date": datetime.now().strftime("%Y-%m-%d"),
                 }

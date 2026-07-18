@@ -12,8 +12,9 @@ from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-RAW_DIR = Path("data/01_raw")
-INTERIM_DIR = Path("data/02_interim")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DIR = PROJECT_ROOT / "data" / "01_raw"
+INTERIM_DIR = PROJECT_ROOT / "data" / "02_interim"
 
 
 class YomiTokuExtractor:

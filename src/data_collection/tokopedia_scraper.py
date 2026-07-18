@@ -22,7 +22,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-RAW_DATA_DIR = Path("data/01_raw")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "01_raw"
 
 HEADERS = {
     "User-Agent": (

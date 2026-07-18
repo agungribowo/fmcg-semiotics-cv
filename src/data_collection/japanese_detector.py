@@ -19,8 +19,9 @@ import pandas as pd
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger(__name__)
 
-RAW_DIR = Path("data/01_raw")
-CLEAN_DIR = Path("data/02_interim/clean")
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+RAW_DIR = PROJECT_ROOT / "data" / "01_raw"
+CLEAN_DIR = PROJECT_ROOT / "data" / "02_interim" / "clean"
 
 # Unicode ranges untuk aksara Jepang
 HIRAGANA = re.compile(r'[\u3040-\u309F]')
