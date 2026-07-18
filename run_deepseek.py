@@ -5,9 +5,11 @@ sys.stdout.reconfigure(encoding='utf-8')
 from pathlib import Path
 from src.data_collection.deepseek_filter import DeepSeekFilter
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+
 # Read key
 api_key = ""
-env_path = Path(".env")
+env_path = PROJECT_ROOT / ".env"
 if env_path.exists():
     for line in env_path.read_text().splitlines():
         if line.startswith("DEEPSEEK_API_KEY="):
@@ -22,7 +24,7 @@ if not api_key:
 
 flt = DeepSeekFilter(api_key=api_key, batch_size=20)
 
-raw = Path("data/01_raw")
+raw = PROJECT_ROOT / "data" / "01_raw"
 
 # Process specific metadata files
 targets = [

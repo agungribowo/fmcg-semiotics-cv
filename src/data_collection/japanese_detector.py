@@ -162,7 +162,8 @@ def filter_dataset(
         logger.info(f"  Copied: {copied} images to {CLEAN_DIR}")
 
     # Save
-    out_path = RAW_DIR / f"{output_prefix}_{metadata_path.stem}.csv"
+    out_path = CLEAN_DIR / f"{output_prefix}_{metadata_path.stem}.csv"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     result_df.to_csv(out_path, index=False)
     logger.info(f"  Saved: {out_path}")
 

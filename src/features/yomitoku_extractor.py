@@ -42,7 +42,7 @@ class YomiTokuExtractor:
 
     def extract_all(self) -> List[Dict]:
         results = []
-        for img_path in RAW_DIR.glob("*.*"):
+        for img_path in RAW_DIR.rglob("*.*"):
             if img_path.suffix.lower() not in (".jpg", ".jpeg", ".png"):
                 continue
             logger.info(f"Processing {img_path.name}")

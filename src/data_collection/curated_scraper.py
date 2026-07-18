@@ -23,7 +23,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-RAW_DATA_DIR = PROJECT_ROOT / "data" / "02_interim" / "curated"
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "01_raw" / "curated"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
 }

@@ -3,8 +3,10 @@ import os, json
 from pathlib import Path
 from openai import OpenAI
 
+PROJECT_ROOT = Path(__file__).resolve().parent
+
 # Read API key from .env
-env_path = Path(".env")
+env_path = PROJECT_ROOT / ".env"
 api_key = ""
 if env_path.exists():
     for line in env_path.read_text().splitlines():

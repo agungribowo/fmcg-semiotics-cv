@@ -4,6 +4,8 @@ torchvision>=0.15.0
 
 # Scraping
 playwright>=1.40.0
+requests>=2.31.0
+beautifulsoup4>=4.12.0
 
 # OCR
 yomitoku>=0.1.0
@@ -12,6 +14,9 @@ yomitoku>=0.1.0
 pandas>=2.0.0
 numpy>=1.24.0
 Pillow>=10.0.0
+
+# AI / LLM
+openai>=1.0.0
 
 # Experiment tracking / notebooks
 jupyter>=1.0.0

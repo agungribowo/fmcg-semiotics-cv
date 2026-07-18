@@ -12,9 +12,7 @@ Cara pakai:
 import os
 import re
 import sys
-import time
 import json
-import hashlib
 import requests
 from pathlib import Path
 from datetime import datetime
