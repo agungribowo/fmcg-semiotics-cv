@@ -42,7 +42,7 @@ Target awal adalah mengumpulkan gambar produk FMCG Indonesia yang mengandung ele
 | Transmart | HTTP 502 (Bad Gateway) | Server bermasalah atau memblokir scraping |
 | Alfamidi | DNS Error | Domain tidak dapat di-resolve dari environment scraping |
 
-**Kesimpulan dari Iterasi 1–3:** Sebagian besar e-commerce Indonesia memiliki proteksi anti-scraping yang kuat. Hanya 2 sumber yang berhasil di-scrape secara konsisten: Tokopedia dan KlikIndomaret.
+**Kesimpulan dari Iterasi 1–3:** Sebagian besar e-commerce Indonesia memiliki proteksi anti-scraping yang kuat. Hanya 2 sumber yang berhasil di-scrape secara konsisten: Tokopedia dan KlikIndomaret. Selain itu, Blibli berhasil di-scrape secara semi-automated.
 
 ---
 
@@ -210,10 +210,12 @@ EasyOCR direncanakan sebagai **Layer 1 real-time gatekeeper** saat scraping berj
 
 | Metrik | Jumlah |
 |--------|--------|
-| Total gambar di-scrape | ~1844 |
+| Total gambar di-scrape (metadata_all.csv) | ~1886 |
+| Total gambar di disk | 1919 |
 | Lolos DeepSeek filter | 1783 (96.7%) |
-| Lolos rule-based filter (ke `data/02_interim/clean/`) | 428 |
-| Sumber scraper yang berhasil | 4 dari 6 yang dicoba |
+| Lolos rule-based filter (ke `data/02_interim/clean/`) | 322 |
+| Sumber scraper yang berhasil | 5 dari 7 yang dicoba |
+| Sumber manual (Shopee Mall + Blibli) | 401 gambar |
 | E-commerce yang diblokir | 5 (Shopee, SuperIndo, Hypermart, Transmart, Alfamidi) |
 | Biaya API DeepSeek | ~$0.05 |
 
@@ -224,4 +226,4 @@ EasyOCR direncanakan sebagai **Layer 1 real-time gatekeeper** saat scraping berj
 1. **Cleaning image-level**: Hapus corrupt, deduplikasi (perceptual hash), validasi resolusi minimum, hapus non-product images
 2. **Preprocessing**: Rename sesuai label, resize 224x224, split train/val/test
 3. **OCR Verification (opsional)**: Install EasyOCR atau YomiToku di environment yang sesuai untuk verifikasi visual apakah gambar benar mengandung tulisan Jepang
-4. **Modeling**: CNN classification (ResNet18) dan multimodal fusion (CNN + LSTM)
+4. **Modeling**: CNN classification (EfficientNetB0) dan multimodal fusion (CNN + LSTM)

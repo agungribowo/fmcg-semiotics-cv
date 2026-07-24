@@ -2,6 +2,7 @@
 CNN Visual Model
 ================
 Arsitektur CNN untuk ekstraksi fitur visual dari gambar produk FMCG.
+Backbone: EfficientNetB0 (dipilih berdasarkan hasil eksperimen sebelumnya)
 Input: image (224, 224, 3)
 Output: feature vector (512,)
 """
@@ -11,14 +12,14 @@ import torch.nn as nn
 
 
 class VisualFeatureExtractor(nn.Module):
-    def __init__(self, backbone: str = "resnet18", pretrained: bool = True):
+    def __init__(self, backbone: str = "efficientnet_b0", pretrained: bool = True):
         super().__init__()
-        if backbone == "resnet18":
-            from torchvision.models import resnet18
-            weights = "DEFAULT" if pretrained else None
-            self.backbone = resnet18(weights=weights)
-            in_features = self.backbone.fc.in_features
-            self.backbone.fc = nn.Identity()
+        if backbone == "efficientnet_b0":
+            from torchvision.models import efficientnet_b0, EfficientNet_B0_Weights
+            weights = EfficientNet_B0_Weights.DEFAULT if pretrained else None
+            self.backbone = efficientnet_b0(weights=weights)
+            in_features = self.backbone.classifier[1].in_features
+            self.backbone.classifier = nn.Identity()
         else:
             raise ValueError(f"Unknown backbone: {backbone}")
 
@@ -37,7 +38,7 @@ class VisualFeatureExtractor(nn.Module):
 class CNNClassifier(nn.Module):
     """Visual-only classifier for semiotic classes."""
 
-    def __init__(self, num_classes: int, backbone: str = "resnet18"):
+    def __init__(self, num_classes: int, backbone: str = "efficientnet_b0"):
         super().__init__()
         self.extractor = VisualFeatureExtractor(backbone)
         self.classifier = nn.Linear(512, num_classes)
